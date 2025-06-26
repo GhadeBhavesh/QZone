@@ -12,13 +12,12 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// PostgreSQL connection
+// PostgreSQL connection using Supabase
 const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 // Create users table if it doesn't exist
@@ -234,6 +233,28 @@ app.get('/api/best-score', verifyToken, async (req, res) => {
     res.json({ bestScore: result.rows[0].best_score || 0 });
   } catch (error) {
     console.error('Get best score error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get leaderboard - top scores from all users
+app.get('/api/leaderboard', verifyToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        u.email,
+        MAX(s.score) as best_score,
+        MAX(s.game_date) as last_played
+      FROM users u
+      JOIN scores s ON u.id = s.user_id
+      GROUP BY u.id, u.email
+      ORDER BY best_score DESC
+      LIMIT 10
+    `);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Get leaderboard error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -3,6 +3,10 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
+  // For real devices, replace with your actual IP address or deployed server URL
+  // To find your IP: run 'ipconfig' in Windows Command Prompt and look for IPv4 Address
+  // Example: static const String baseUrl = 'http://192.168.1.100:3000/api';
+  // For now, keeping emulator URL - you'll need to change this
   static const String baseUrl = 'http://10.0.2.2:3000/api';
 
   Future<Map<String, dynamic>> signup(String email, String password) async {
@@ -161,6 +165,33 @@ class AuthService {
         return {
           'success': false,
           'error': data['error'] ?? 'Failed to get best score',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> getLeaderboard() async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return {'success': false, 'error': 'Not authenticated'};
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/leaderboard'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final leaderboard = jsonDecode(response.body);
+        return {'success': true, 'leaderboard': leaderboard};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'error': data['error'] ?? 'Failed to get leaderboard',
         };
       }
     } catch (e) {

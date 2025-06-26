@@ -4,6 +4,7 @@ import 'room_page.dart';
 import 'widgets/auth_wrapper.dart';
 import 'pages/login_page.dart';
 import 'pages/scores_page.dart';
+import 'pages/leaderboard_page.dart';
 import 'services/auth_service.dart';
 
 void main() {
@@ -124,6 +125,15 @@ class _MyHomePageState extends State<MyHomePage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const ScoresPage()),
+                );
+              }),
+              const SizedBox(height: 20),
+              _buildButton('Leaderboard', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const LeaderboardPage(),
+                  ),
                 );
               }),
               const SizedBox(height: 20),
