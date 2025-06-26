@@ -12,14 +12,19 @@ app.use(cors());
 app.use(express.json());
 
 // PostgreSQL connection using Supabase
+// Using environment variable with fallback
+const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:bhavesh%404321@db.wiblsiguzfdbayuydudr.supabase.co:5432/postgres';
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: connectionString,
   ssl: {
     rejectUnauthorized: false
   },
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
+  // Force IPv4
+  options: '-c default_transaction_isolation=read_committed',
 });
 
 
@@ -62,16 +67,16 @@ const PORT = process.env.PORT || 3000;
 
 // Test database connection and start server
 async function startServer() {
+  // Start server first
+  const server = app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+
   try {
     console.log('Starting server...');
     console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
     console.log('NODE_ENV:', process.env.NODE_ENV);
     
-    // Start server first
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-
     // Test database connection and initialize tables
     console.log('Testing database connection...');
     const client = await pool.connect();
@@ -94,12 +99,7 @@ async function startServer() {
       port: error.port
     });
     
-    // Still start the server even if DB fails initially
-    if (!app.listening) {
-      app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT} (without database)`);
-      });
-    }
+    console.log('Server will continue running without database connection');
   }
 }
 
@@ -114,6 +114,12 @@ app.get('/health', (req, res) => {
 // Test database connection endpoint
 app.get('/api/test-db', async (req, res) => {
   try {
+    console.log('Testing database connection with individual parameters...');
+    console.log('Host: db.wiblsiguzfdbayuydudr.supabase.co');
+    console.log('Port: 5432');
+    console.log('Database: postgres');
+    console.log('User: postgres');
+    
     const client = await pool.connect();
     const result = await client.query('SELECT NOW()');
     client.release();
@@ -122,15 +128,30 @@ app.get('/api/test-db', async (req, res) => {
       timestamp: result.rows[0].now 
     });
   } catch (error) {
+    console.error('Database test error:', error);
     res.status(500).json({ 
       status: 'Database connection failed', 
-      error: error.message 
+      error: error.message,
+      code: error.code,
+      address: error.address
     });
   }
 });
 
+// Database connection helper with retry logic
+async function getDbConnection() {
+  try {
+    const client = await pool.connect();
+    return client;
+  } catch (error) {
+    console.error('Database connection failed:', error.message);
+    throw new Error('Database temporarily unavailable');
+  }
+}
+
 // Routes
 app.post('/api/signup', async (req, res) => {
+  let client;
   try {
     const { email, password } = req.body;
 
@@ -139,8 +160,11 @@ app.post('/api/signup', async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
+    // Get database connection
+    client = await getDbConnection();
+
     // Check if user already exists
-    const existingUser = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const existingUser = await client.query('SELECT * FROM users WHERE email = $1', [email]);
     if (existingUser.rows.length > 0) {
       return res.status(400).json({ error: 'User already exists' });
     }
@@ -150,7 +174,7 @@ app.post('/api/signup', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     // Insert new user
-    const result = await pool.query(
+    const result = await client.query(
       'INSERT INTO users (email, password) VALUES ($1, $2) RETURNING id, email, created_at',
       [email, hashedPassword]
     );
@@ -173,7 +197,13 @@ app.post('/api/signup', async (req, res) => {
     });
   } catch (error) {
     console.error('Signup error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    if (error.message === 'Database temporarily unavailable') {
+      res.status(503).json({ error: 'Service temporarily unavailable. Please try again later.' });
+    } else {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  } finally {
+    if (client) client.release();
   }
 });
 
