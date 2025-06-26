@@ -14,10 +14,12 @@ app.use(express.json());
 // PostgreSQL connection using Supabase
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: {
+    rejectUnauthorized: false
+  },
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000,
 });
 
 
@@ -65,7 +67,13 @@ async function startServer() {
     console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
     console.log('NODE_ENV:', process.env.NODE_ENV);
     
-    // Test database connection
+    // Start server first
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+
+    // Test database connection and initialize tables
+    console.log('Testing database connection...');
     const client = await pool.connect();
     console.log('Connected to Supabase database successfully');
     client.release();
@@ -73,13 +81,10 @@ async function startServer() {
     // Initialize database tables
     await createUsersTable();
     await createScoresTable();
+    console.log('Database initialization complete');
     
-    // Start server
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error('Database connection failed:', error);
     console.error('Error details:', {
       message: error.message,
       code: error.code,
@@ -88,12 +93,41 @@ async function startServer() {
       address: error.address,
       port: error.port
     });
-    process.exit(1);
+    
+    // Still start the server even if DB fails initially
+    if (!app.listening) {
+      app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT} (without database)`);
+      });
+    }
   }
 }
 
 // Initialize database
 startServer();
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'Server is running', timestamp: new Date().toISOString() });
+});
+
+// Test database connection endpoint
+app.get('/api/test-db', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    const result = await client.query('SELECT NOW()');
+    client.release();
+    res.json({ 
+      status: 'Database connected', 
+      timestamp: result.rows[0].now 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      status: 'Database connection failed', 
+      error: error.message 
+    });
+  }
+});
 
 // Routes
 app.post('/api/signup', async (req, res) => {
