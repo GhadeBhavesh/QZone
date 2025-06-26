@@ -14,10 +14,12 @@ app.use(express.json());
 // PostgreSQL connection using Supabase
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 });
+
 
 // Create users table if it doesn't exist
 async function createUsersTable() {
@@ -54,9 +56,44 @@ async function createScoresTable() {
   }
 }
 
+const PORT = process.env.PORT || 3000;
+
+// Test database connection and start server
+async function startServer() {
+  try {
+    console.log('Starting server...');
+    console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
+    console.log('NODE_ENV:', process.env.NODE_ENV);
+    
+    // Test database connection
+    const client = await pool.connect();
+    console.log('Connected to Supabase database successfully');
+    client.release();
+    
+    // Initialize database tables
+    await createUsersTable();
+    await createScoresTable();
+    
+    // Start server
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      errno: error.errno,
+      syscall: error.syscall,
+      address: error.address,
+      port: error.port
+    });
+    process.exit(1);
+  }
+}
+
 // Initialize database
-createUsersTable();
-createScoresTable();
+startServer();
 
 // Routes
 app.post('/api/signup', async (req, res) => {
