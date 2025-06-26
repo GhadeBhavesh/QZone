@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'services/auth_service.dart';
 
 class QuizQuestion {
   final String question;
@@ -24,7 +25,9 @@ class _QuizPageState extends State<QuizPage> {
   int score = 0;
   int timeLeft = 30;
   int currentQuestionIndex = 0;
+  int totalQuestionsAttempted = 0;
   late Timer timer;
+  final _authService = AuthService();
 
   final List<QuizQuestion> questions = [
     QuizQuestion(
@@ -74,6 +77,10 @@ class _QuizPageState extends State<QuizPage> {
   }
 
   void checkAnswer(int selectedAnswer) {
+    setState(() {
+      totalQuestionsAttempted++;
+    });
+
     if (selectedAnswer == questions[currentQuestionIndex].correctAnswer) {
       setState(() {
         score += 10;
@@ -95,8 +102,24 @@ class _QuizPageState extends State<QuizPage> {
     }
   }
 
-  void showScore() {
+  void showScore() async {
     timer.cancel();
+
+    // Save score to database
+    try {
+      final result = await _authService.saveScore(
+        score,
+        totalQuestionsAttempted,
+      );
+      if (!result['success']) {
+        print('Failed to save score: ${result['error']}');
+      }
+    } catch (e) {
+      print('Error saving score: $e');
+    }
+
+    if (!mounted) return;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -107,7 +130,7 @@ class _QuizPageState extends State<QuizPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text('Final Score: $score'),
-                Text('Questions Attempted: ${currentQuestionIndex + 1}'),
+                Text('Questions Attempted: $totalQuestionsAttempted'),
               ],
             ),
             actions: [
@@ -124,6 +147,7 @@ class _QuizPageState extends State<QuizPage> {
                   setState(() {
                     score = 0;
                     currentQuestionIndex = 0;
+                    totalQuestionsAttempted = 0;
                     timeLeft = 30;
                     startTimer();
                   });

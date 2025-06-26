@@ -38,8 +38,27 @@ async function createUsersTable() {
   }
 }
 
+// Create scores table if it doesn't exist
+async function createScoresTable() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS scores (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        score INTEGER NOT NULL,
+        questions_attempted INTEGER NOT NULL,
+        game_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('Scores table created or already exists');
+  } catch (error) {
+    console.error('Error creating scores table:', error);
+  }
+}
+
 // Initialize database
 createUsersTable();
+createScoresTable();
 
 // Routes
 app.post('/api/signup', async (req, res) => {
@@ -159,6 +178,62 @@ app.get('/api/profile', verifyToken, async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Profile error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Save quiz score
+app.post('/api/save-score', verifyToken, async (req, res) => {
+  try {
+    const { score, questionsAttempted } = req.body;
+
+    // Validate input
+    if (score === undefined || questionsAttempted === undefined) {
+      return res.status(400).json({ error: 'Score and questions attempted are required' });
+    }
+
+    // Save score to database
+    const result = await pool.query(
+      'INSERT INTO scores (user_id, score, questions_attempted) VALUES ($1, $2, $3) RETURNING *',
+      [req.user.userId, score, questionsAttempted]
+    );
+
+    res.status(201).json({
+      message: 'Score saved successfully',
+      score: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Save score error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get user's scores
+app.get('/api/scores', verifyToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM scores WHERE user_id = $1 ORDER BY game_date DESC',
+      [req.user.userId]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Get scores error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get user's best score
+app.get('/api/best-score', verifyToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT MAX(score) as best_score FROM scores WHERE user_id = $1',
+      [req.user.userId]
+    );
+
+    res.json({ bestScore: result.rows[0].best_score || 0 });
+  } catch (error) {
+    console.error('Get best score error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

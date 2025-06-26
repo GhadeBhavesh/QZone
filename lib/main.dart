@@ -3,6 +3,7 @@ import 'quiz_page.dart';
 import 'room_page.dart';
 import 'widgets/auth_wrapper.dart';
 import 'pages/login_page.dart';
+import 'pages/scores_page.dart';
 import 'services/auth_service.dart';
 
 void main() {
@@ -49,12 +50,13 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        automaticallyImplyLeading: false,
+        backgroundColor: Colors.purple.shade900,
         elevation: 0,
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.white),
-            color: Colors.white,
+            color: Colors.blue,
             onSelected: (value) {
               if (value == 'logout') {
                 _logout();
@@ -115,6 +117,13 @@ class _MyHomePageState extends State<MyHomePage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const RoomPage()),
+                );
+              }),
+              const SizedBox(height: 20),
+              _buildButton('My Scores', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ScoresPage()),
                 );
               }),
               const SizedBox(height: 20),
