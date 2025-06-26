@@ -3,11 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
-  // For real devices, replace with your actual IP address or deployed server URL
-  // To find your IP: run 'ipconfig' in Windows Command Prompt and look for IPv4 Address
-  // Example: static const String baseUrl = 'http://192.168.1.100:3000/api';
-  // For now, keeping emulator URL - you'll need to change this
-  static const String baseUrl = 'http://10.0.2.2:3000/api';
+  static const String baseUrl = 'https://qzone.onrender.com/api';
 
   Future<Map<String, dynamic>> signup(String email, String password) async {
     try {
