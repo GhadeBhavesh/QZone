@@ -257,7 +257,3 @@ app.get('/api/leaderboard', verifyToken, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
