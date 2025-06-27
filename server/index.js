@@ -13,7 +13,7 @@ app.use(express.json());
 
 // PostgreSQL connection using Supabase
 // Using environment variable with fallback
-const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:bhavesh%404321@db.wiblsiguzfdbayuydudr.supabase.co:5432/postgres';
+const connectionString = process.env.DATABASE_URL || 'postgresql://postgres.wiblsiguzfdbayuydudr:bhavesh%404321@aws-0-ap-south-1.pooler.supabase.com:6543/postgres';
 
 const pool = new Pool({
   connectionString: connectionString,
@@ -23,8 +23,6 @@ const pool = new Pool({
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
-  // Force IPv4
-  options: '-c default_transaction_isolation=read_committed',
 });
 
 
@@ -72,35 +70,39 @@ async function startServer() {
     console.log(`Server running on port ${PORT}`);
   });
 
-  try {
-    console.log('Starting server...');
-    console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
-    console.log('NODE_ENV:', process.env.NODE_ENV);
-    
-    // Test database connection and initialize tables
-    console.log('Testing database connection...');
-    const client = await pool.connect();
-    console.log('Connected to Supabase database successfully');
-    client.release();
-    
-    // Initialize database tables
-    await createUsersTable();
-    await createScoresTable();
-    console.log('Database initialization complete');
-    
-  } catch (error) {
-    console.error('Database connection failed:', error);
-    console.error('Error details:', {
-      message: error.message,
-      code: error.code,
-      errno: error.errno,
-      syscall: error.syscall,
-      address: error.address,
-      port: error.port
-    });
-    
-    console.log('Server will continue running without database connection');
-  }
+  // Then try to connect to database
+  setTimeout(async () => {
+    try {
+      console.log('Starting server...');
+      console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
+      console.log('NODE_ENV:', process.env.NODE_ENV);
+      
+      // Test database connection and initialize tables
+      console.log('Testing database connection...');
+      const client = await pool.connect();
+      console.log('Connected to Supabase database successfully');
+      client.release();
+      
+      // Initialize database tables
+      await createUsersTable();
+      await createScoresTable();
+      console.log('Database initialization complete');
+      
+    } catch (error) {
+      console.error('Database connection failed:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        errno: error.errno,
+        syscall: error.syscall,
+        address: error.address,
+        port: error.port
+      });
+      
+      console.log('Server will continue running without database connection');
+      console.log('Database operations will fail until connection is restored');
+    }
+  }, 2000); // Wait 2 seconds before trying database connection
 }
 
 // Initialize database

@@ -3,6 +3,9 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
+  // For development with real devices, use your local IP
+  // For production, use the Render URL
+  // static const String baseUrl = 'http://192.168.141.150:3000/api';
   static const String baseUrl = 'https://qzone.onrender.com/api';
 
   Future<Map<String, dynamic>> signup(String email, String password) async {
