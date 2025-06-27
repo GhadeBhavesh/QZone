@@ -272,7 +272,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
-                                  '${entry['highestScore']} pts',
+                                  '${entry['best_score'] ?? 0} pts',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
