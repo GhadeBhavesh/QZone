@@ -3,9 +3,21 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Pool } = require('pg');
+const { createServer } = require('http');
+const { Server } = require('socket.io');
 require('dotenv').config();
 
 const app = express();
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
+
+// Store active rooms
+const rooms = new Map();
 
 // Middleware
 app.use(cors());
@@ -66,7 +78,7 @@ const PORT = process.env.PORT || 3000;
 // Test database connection and start server
 async function startServer() {
   // Start server first
-  const server = app.listen(PORT, () => {
+  const httpServer = server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
 
@@ -359,4 +371,143 @@ app.get('/api/leaderboard', verifyToken, async (req, res) => {
     console.error('Get leaderboard error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
+});
+
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
+
+  // Create room
+  socket.on('create-room', (data) => {
+    const { roomId, userName } = data;
+    
+    // Create room if it doesn't exist
+    if (!rooms.has(roomId)) {
+      rooms.set(roomId, {
+        id: roomId,
+        creator: userName,
+        participants: [],
+        createdAt: Date.now()
+      });
+    }
+
+    // Join the socket room
+    socket.join(roomId);
+    
+    // Add user to room participants
+    const room = rooms.get(roomId);
+    room.participants.push({
+      id: socket.id,
+      name: userName,
+      isCreator: true
+    });
+
+    socket.emit('room-created', {
+      roomId,
+      room: room
+    });
+
+    console.log(`Room ${roomId} created by ${userName}`);
+  });
+
+  // Join room
+  socket.on('join-room', (data) => {
+    const { roomId, userName } = data;
+    
+    if (!rooms.has(roomId)) {
+      socket.emit('room-error', { message: 'Room not found' });
+      return;
+    }
+
+    const room = rooms.get(roomId);
+    
+    // Check if room is full (limit to 2 players for now)
+    if (room.participants.length >= 2) {
+      socket.emit('room-error', { message: 'Room is full' });
+      return;
+    }
+
+    // Join the socket room
+    socket.join(roomId);
+    
+    // Add user to room participants
+    room.participants.push({
+      id: socket.id,
+      name: userName,
+      isCreator: false
+    });
+
+    // Notify all users in the room
+    io.to(roomId).emit('user-joined', {
+      userName,
+      room: room
+    });
+
+    socket.emit('room-joined', {
+      roomId,
+      room: room
+    });
+
+    console.log(`${userName} joined room ${roomId}`);
+  });
+
+  // Leave room
+  socket.on('leave-room', (roomId) => {
+    if (rooms.has(roomId)) {
+      const room = rooms.get(roomId);
+      room.participants = room.participants.filter(p => p.id !== socket.id);
+      
+      socket.leave(roomId);
+      
+      // Notify other users
+      socket.to(roomId).emit('user-left', {
+        socketId: socket.id,
+        room: room
+      });
+
+      // Delete room if empty
+      if (room.participants.length === 0) {
+        rooms.delete(roomId);
+        console.log(`Room ${roomId} deleted (empty)`);
+      }
+    }
+  });
+
+  // Handle disconnection
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+    
+    // Remove user from all rooms
+    rooms.forEach((room, roomId) => {
+      const participantIndex = room.participants.findIndex(p => p.id === socket.id);
+      if (participantIndex !== -1) {
+        room.participants.splice(participantIndex, 1);
+        
+        // Notify other users
+        socket.to(roomId).emit('user-left', {
+          socketId: socket.id,
+          room: room
+        });
+
+        // Delete room if empty
+        if (room.participants.length === 0) {
+          rooms.delete(roomId);
+          console.log(`Room ${roomId} deleted (empty)`);
+        }
+      }
+    });
+  });
+
+  // Start game in room
+  socket.on('start-game', (roomId) => {
+    if (rooms.has(roomId)) {
+      const room = rooms.get(roomId);
+      if (room.participants.length >= 2) {
+        io.to(roomId).emit('game-started', { roomId });
+        console.log(`Game started in room ${roomId}`);
+      } else {
+        socket.emit('room-error', { message: 'Need at least 2 players to start' });
+      }
+    }
+  });
 });

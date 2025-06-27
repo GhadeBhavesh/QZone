@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
+import 'services/socket_service.dart';
+import 'pages/room_waiting_page.dart';
 
 class RoomPage extends StatefulWidget {
   const RoomPage({super.key});
@@ -11,27 +13,66 @@ class RoomPage extends StatefulWidget {
 
 class _RoomPageState extends State<RoomPage> {
   final TextEditingController _roomIdController = TextEditingController();
-  String? _generatedRoomId;
+  final SocketService _socketService = SocketService();
+
+  @override
+  void initState() {
+    super.initState();
+    _socketService.connect();
+  }
 
   void _createRoom() {
     final roomId = const Uuid().v4().substring(0, 6).toUpperCase();
-    setState(() {
-      _generatedRoomId = roomId;
-    });
+
+    // Navigate to waiting room as creator
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RoomWaitingPage(roomId: roomId, isCreator: true),
+      ),
+    );
   }
 
   void _joinRoom() {
     if (_roomIdController.text.isNotEmpty) {
-      // TODO: Implement room joining logic
+      final roomId = _roomIdController.text.trim().toUpperCase();
+
+      // Navigate to waiting room as participant
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) => RoomWaitingPage(roomId: roomId, isCreator: false),
+        ),
+      ).then((_) {
+        // Clear input when coming back
+        _roomIdController.clear();
+      });
+    } else {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Joining room...')));
+      ).showSnackBar(const SnackBar(content: Text('Please enter a room ID')));
     }
+  }
+
+  @override
+  void dispose() {
+    _roomIdController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Multiplayer Room',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.purple.shade900,
+        iconTheme: const IconThemeData(color: Colors.white),
+        elevation: 0,
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -46,12 +87,19 @@ class _RoomPageState extends State<RoomPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (_generatedRoomId == null) ...[
-                  _buildJoinRoomSection(),
-                  const SizedBox(height: 40),
-                  _buildCreateRoomButton(),
-                ] else
-                  _buildRoomCreatedSection(),
+                const Text(
+                  'Join or Create a Room',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 40),
+                _buildJoinRoomSection(),
+                const SizedBox(height: 40),
+                _buildCreateRoomButton(),
               ],
             ),
           ),
@@ -100,62 +148,6 @@ class _RoomPageState extends State<RoomPage> {
         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
       ),
       child: const Text('Create Room', style: TextStyle(fontSize: 18)),
-    );
-  }
-
-  Widget _buildRoomCreatedSection() {
-    return Column(
-      children: [
-        const Text(
-          'Room Created!',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 20),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                _generatedRoomId!,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  letterSpacing: 2,
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.copy, color: Colors.white),
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: _generatedRoomId!));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Room ID copied to clipboard'),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        TextButton(
-          onPressed: () {
-            setState(() {
-              _generatedRoomId = null;
-            });
-          },
-          child: const Text('Create Another Room'),
-        ),
-      ],
     );
   }
 }
