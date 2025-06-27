@@ -19,6 +19,63 @@ const io = new Server(server, {
 // Store active rooms
 const rooms = new Map();
 
+// Quiz questions
+const quizQuestions = [
+  {
+    question: "What is the capital of France?",
+    options: ["London", "Berlin", "Paris", "Madrid"],
+    correctAnswer: 2,
+  },
+  {
+    question: "Which planet is known as the Red Planet?",
+    options: ["Venus", "Mars", "Jupiter", "Saturn"],
+    correctAnswer: 1,
+  },
+  {
+    question: "What is 2 + 2 × 4?",
+    options: ["16", "10", "8", "12"],
+    correctAnswer: 1,
+  },
+  {
+    question: "Who painted the Mona Lisa?",
+    options: ["Van Gogh", "Da Vinci", "Picasso", "Michelangelo"],
+    correctAnswer: 1,
+  },
+  {
+    question: "What is the largest mammal?",
+    options: ["African Elephant", "Blue Whale", "Giraffe", "Hippopotamus"],
+    correctAnswer: 1,
+  },
+  {
+    question: "What is the smallest country in the world?",
+    options: ["Monaco", "Vatican City", "San Marino", "Liechtenstein"],
+    correctAnswer: 1,
+  },
+  {
+    question: "Which programming language is known for its use in web development?",
+    options: ["Python", "JavaScript", "C++", "Assembly"],
+    correctAnswer: 1,
+  },
+  {
+    question: "What is the chemical symbol for gold?",
+    options: ["Go", "Gd", "Au", "Ag"],
+    correctAnswer: 2,
+  },
+  {
+    question: "Which year did World War II end?",
+    options: ["1944", "1945", "1946", "1947"],
+    correctAnswer: 1,
+  },
+  {
+    question: "What is the fastest land animal?",
+    options: ["Lion", "Cheetah", "Gazelle", "Horse"],
+    correctAnswer: 1,
+  },
+];
+
+// Store active games
+const activeGames = new Map();
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -503,11 +560,192 @@ io.on('connection', (socket) => {
     if (rooms.has(roomId)) {
       const room = rooms.get(roomId);
       if (room.participants.length >= 2) {
-        io.to(roomId).emit('game-started', { roomId });
+        // Initialize game state
+        const gameState = {
+          roomId: roomId,
+          currentQuestionIndex: 0,
+          totalQuestions: quizQuestions.length,
+          players: room.participants.map(p => ({
+            id: p.id,
+            name: p.name,
+            score: 0,
+            hasAnswered: false,
+            answer: null,
+            answerTime: null
+          })),
+          questionStartTime: null,
+          timer: null,
+          isGameActive: true
+        };
+        
+        activeGames.set(roomId, gameState);
+        
+        io.to(roomId).emit('game-started', { 
+          roomId,
+          totalQuestions: gameState.totalQuestions 
+        });
+        
         console.log(`Game started in room ${roomId}`);
+        
+        // Start first question after a short delay
+        setTimeout(() => {
+          startNextQuestion(roomId);
+        }, 3000);
       } else {
         socket.emit('room-error', { message: 'Need at least 2 players to start' });
       }
     }
   });
+
+  // Handle quiz answer
+  socket.on('submit-answer', (data) => {
+    const { roomId, answer } = data;
+    const game = activeGames.get(roomId);
+    
+    if (!game || !game.isGameActive) return;
+    
+    const player = game.players.find(p => p.id === socket.id);
+    if (!player || player.hasAnswered) return;
+    
+    // Record answer and time
+    player.hasAnswered = true;
+    player.answer = answer;
+    player.answerTime = Date.now();
+    
+    console.log(`Player ${player.name} answered ${answer} in room ${roomId}`);
+    
+    // Check if all players have answered
+    const allAnswered = game.players.every(p => p.hasAnswered);
+    if (allAnswered) {
+      clearTimeout(game.timer);
+      processQuestionResults(roomId);
+    }
+  });
+
+  // Function to start next question
+  function startNextQuestion(roomId) {
+    const game = activeGames.get(roomId);
+    if (!game || !game.isGameActive) return;
+    
+    if (game.currentQuestionIndex >= game.totalQuestions) {
+      endGame(roomId);
+      return;
+    }
+    
+    const question = quizQuestions[game.currentQuestionIndex];
+    
+    // Reset player states for new question
+    game.players.forEach(p => {
+      p.hasAnswered = false;
+      p.answer = null;
+      p.answerTime = null;
+    });
+    
+    game.questionStartTime = Date.now();
+    
+    // Send question to all players
+    io.to(roomId).emit('new-question', {
+      questionIndex: game.currentQuestionIndex,
+      question: question.question,
+      options: question.options,
+      timeLimit: 10000 // 10 seconds
+    });
+    
+    console.log(`Question ${game.currentQuestionIndex + 1} started in room ${roomId}`);
+    
+    // Set timer for question timeout
+    game.timer = setTimeout(() => {
+      processQuestionResults(roomId);
+    }, 10000);
+  }
+  
+  // Function to process question results
+  function processQuestionResults(roomId) {
+    const game = activeGames.get(roomId);
+    if (!game) return;
+    
+    const question = quizQuestions[game.currentQuestionIndex];
+    const correctAnswer = question.correctAnswer;
+    
+    // Sort players by answer time (faster first)
+    const answeredPlayers = game.players
+      .filter(p => p.hasAnswered && p.answer !== null)
+      .sort((a, b) => a.answerTime - b.answerTime);
+    
+    // Calculate scores
+    const results = game.players.map(player => {
+      let pointsEarned = 0;
+      let status = 'no-answer';
+      
+      if (player.hasAnswered && player.answer === correctAnswer) {
+        // Correct answer
+        const answerIndex = answeredPlayers.findIndex(p => p.id === player.id);
+        if (answerIndex === 0) {
+          pointsEarned = 10; // First correct answer
+          status = 'first-correct';
+        } else {
+          pointsEarned = 5; // Subsequent correct answers
+          status = 'correct';
+        }
+      } else if (player.hasAnswered) {
+        pointsEarned = -5; // Wrong answer
+        status = 'wrong';
+      } else {
+        pointsEarned = 0; // No answer
+        status = 'no-answer';
+      }
+      
+      player.score += pointsEarned;
+      
+      return {
+        playerId: player.id,
+        playerName: player.name,
+        answer: player.answer,
+        pointsEarned,
+        totalScore: player.score,
+        status
+      };
+    });
+    
+    // Send results to all players
+    io.to(roomId).emit('question-results', {
+      questionIndex: game.currentQuestionIndex,
+      correctAnswer,
+      results,
+      leaderboard: game.players
+        .map(p => ({ name: p.name, score: p.score }))
+        .sort((a, b) => b.score - a.score)
+    });
+    
+    console.log(`Question ${game.currentQuestionIndex + 1} results processed in room ${roomId}`);
+    
+    game.currentQuestionIndex++;
+    
+    // Start next question after showing results
+    setTimeout(() => {
+      startNextQuestion(roomId);
+    }, 5000);
+  }
+  
+  // Function to end game
+  function endGame(roomId) {
+    const game = activeGames.get(roomId);
+    if (!game) return;
+    
+    game.isGameActive = false;
+    
+    const finalResults = game.players
+      .map(p => ({ name: p.name, score: p.score }))
+      .sort((a, b) => b.score - a.score);
+    
+    io.to(roomId).emit('game-ended', {
+      finalResults,
+      winner: finalResults[0]
+    });
+    
+    console.log(`Game ended in room ${roomId}`);
+    
+    // Clean up
+    activeGames.delete(roomId);
+  }
 });

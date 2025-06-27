@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/socket_service.dart';
 import '../services/auth_service.dart';
+import 'multiplayer_quiz_page.dart';
 
 class RoomWaitingPage extends StatefulWidget {
   final String roomId;
@@ -81,7 +82,14 @@ class _RoomWaitingPageState extends State<RoomWaitingPage> {
         _gameStarted = true;
       });
       _showSnackBar('Game started!');
-      // TODO: Navigate to multiplayer quiz page
+
+      // Navigate to multiplayer quiz page
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MultiplayerQuizPage(roomId: widget.roomId),
+        ),
+      );
     });
   }
 

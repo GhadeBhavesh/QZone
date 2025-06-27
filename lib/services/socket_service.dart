@@ -60,6 +60,10 @@ class SocketService {
     socket.emit('start-game', roomId);
   }
 
+  void submitAnswer(String roomId, int answer) {
+    socket.emit('submit-answer', {'roomId': roomId, 'answer': answer});
+  }
+
   // Event listeners
   void onRoomCreated(Function(dynamic) callback) {
     socket.on('room-created', callback);
@@ -85,6 +89,19 @@ class SocketService {
     socket.on('game-started', callback);
   }
 
+  // Quiz event listeners
+  void onNewQuestion(Function(dynamic) callback) {
+    socket.on('new-question', callback);
+  }
+
+  void onQuestionResults(Function(dynamic) callback) {
+    socket.on('question-results', callback);
+  }
+
+  void onGameEnded(Function(dynamic) callback) {
+    socket.on('game-ended', callback);
+  }
+
   // Remove listeners
   void removeAllListeners() {
     socket.off('room-created');
@@ -93,5 +110,8 @@ class SocketService {
     socket.off('user-left');
     socket.off('room-error');
     socket.off('game-started');
+    socket.off('new-question');
+    socket.off('question-results');
+    socket.off('game-ended');
   }
 }
