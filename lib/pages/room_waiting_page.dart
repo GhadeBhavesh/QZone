@@ -130,7 +130,8 @@ class _RoomWaitingPageState extends State<RoomWaitingPage> {
 
   @override
   void dispose() {
-    _socketService.removeAllListeners();
+    // Don't remove listeners when navigating to quiz page
+    // _socketService.removeAllListeners();
     super.dispose();
   }
 

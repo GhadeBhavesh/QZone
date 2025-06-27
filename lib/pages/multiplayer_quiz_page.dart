@@ -39,6 +39,7 @@ class _MultiplayerQuizPageState extends State<MultiplayerQuizPage> {
   @override
   void initState() {
     super.initState();
+    print('MultiplayerQuizPage initState called');
     _initializeUser();
     _setupSocketListeners();
   }
@@ -51,6 +52,7 @@ class _MultiplayerQuizPageState extends State<MultiplayerQuizPage> {
   }
 
   void _setupSocketListeners() {
+    print('Setting up socket listeners in MultiplayerQuizPage');
     _socketService.onNewQuestion((data) {
       print('New question received: $data');
       _handleNewQuestion(data);
@@ -68,6 +70,7 @@ class _MultiplayerQuizPageState extends State<MultiplayerQuizPage> {
   }
 
   void _handleNewQuestion(Map<String, dynamic> data) {
+    print('Handling new question: $data');
     setState(() {
       _currentQuestion = data['question'];
       _options = List<String>.from(data['options']);
@@ -77,6 +80,8 @@ class _MultiplayerQuizPageState extends State<MultiplayerQuizPage> {
       _selectedAnswer = null;
       _showingResults = false;
     });
+    print('Question set: $_currentQuestion');
+    print('Options set: $_options');
 
     _startTimer();
   }
