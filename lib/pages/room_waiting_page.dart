@@ -111,10 +111,15 @@ class _RoomWaitingPageState extends State<RoomWaitingPage> {
   }
 
   void _startGame() {
-    if (_participants.length >= 2) {
+    if (_participants.length >= 2 && _participants.length <= 10) {
       _socketService.startGame(widget.roomId);
-    } else {
+    } else if (_participants.length < 2) {
       _showSnackBar('Need at least 2 players to start', isError: true);
+    } else {
+      _showSnackBar(
+        'Too many players! Maximum 10 players allowed',
+        isError: true,
+      );
     }
   }
 
@@ -251,7 +256,7 @@ class _RoomWaitingPageState extends State<RoomWaitingPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Players (${_participants.length}/2)',
+                          'Players (${_participants.length}/10)',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 20,
@@ -388,7 +393,11 @@ class _RoomWaitingPageState extends State<RoomWaitingPage> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: _participants.length >= 2 ? _startGame : null,
+                      onPressed:
+                          (_participants.length >= 2 &&
+                                  _participants.length <= 10)
+                              ? _startGame
+                              : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green.shade600,
                         padding: const EdgeInsets.symmetric(vertical: 16),

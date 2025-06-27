@@ -478,8 +478,8 @@ io.on('connection', (socket) => {
 
     const room = rooms.get(roomId);
     
-    // Check if room is full (limit to 2 players for now)
-    if (room.participants.length >= 2) {
+    // Check if room is full (limit to 10 players)
+    if (room.participants.length >= 10) {
       socket.emit('room-error', { message: 'Room is full' });
       return;
     }
@@ -559,7 +559,7 @@ io.on('connection', (socket) => {
   socket.on('start-game', (roomId) => {
     if (rooms.has(roomId)) {
       const room = rooms.get(roomId);
-      if (room.participants.length >= 2) {
+      if (room.participants.length >= 2 && room.participants.length <= 10) {
         // Initialize game state
         const gameState = {
           roomId: roomId,
@@ -592,7 +592,7 @@ io.on('connection', (socket) => {
           startNextQuestion(roomId);
         }, 3000);
       } else {
-        socket.emit('room-error', { message: 'Need at least 2 players to start' });
+        socket.emit('room-error', { message: 'Need at least 2 players and maximum 10 players to start' });
       }
     }
   });
