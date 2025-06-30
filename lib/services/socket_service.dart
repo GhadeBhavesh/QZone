@@ -102,6 +102,23 @@ class SocketService {
     socket.on('game-ended', callback);
   }
 
+  // Remove listeners for room-related events specifically
+  void removeRoomListeners() {
+    socket.off('room-created');
+    socket.off('room-joined');
+    socket.off('user-joined');
+    socket.off('user-left');
+    socket.off('room-error');
+    socket.off('game-started');
+  }
+
+  // Remove listeners for quiz-related events specifically
+  void removeQuizListeners() {
+    socket.off('new-question');
+    socket.off('question-results');
+    socket.off('game-ended');
+  }
+
   // Remove listeners
   void removeAllListeners() {
     socket.off('room-created');
@@ -113,5 +130,14 @@ class SocketService {
     socket.off('new-question');
     socket.off('question-results');
     socket.off('game-ended');
+  }
+
+  // Remove specific listeners
+  void removeListener(String event, Function(dynamic)? callback) {
+    if (callback != null) {
+      socket.off(event, callback);
+    } else {
+      socket.off(event);
+    }
   }
 }

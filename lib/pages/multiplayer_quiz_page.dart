@@ -54,22 +54,26 @@ class _MultiplayerQuizPageState extends State<MultiplayerQuizPage> {
   void _setupSocketListeners() {
     print('Setting up socket listeners in MultiplayerQuizPage');
     _socketService.onNewQuestion((data) {
+      if (!mounted) return;
       print('New question received: $data');
       _handleNewQuestion(data);
     });
 
     _socketService.onQuestionResults((data) {
+      if (!mounted) return;
       print('Question results: $data');
       _handleQuestionResults(data);
     });
 
     _socketService.onGameEnded((data) {
+      if (!mounted) return;
       print('Game ended: $data');
       _handleGameEnded(data);
     });
   }
 
   void _handleNewQuestion(Map<String, dynamic> data) {
+    if (!mounted) return;
     print('Handling new question: $data');
     setState(() {
       _currentQuestion = data['question'];
@@ -606,7 +610,7 @@ class _MultiplayerQuizPageState extends State<MultiplayerQuizPage> {
   @override
   void dispose() {
     _timer?.cancel();
-    _socketService.removeAllListeners();
+    _socketService.removeQuizListeners();
     super.dispose();
   }
 

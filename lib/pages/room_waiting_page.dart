@@ -34,6 +34,7 @@ class _RoomWaitingPageState extends State<RoomWaitingPage> {
 
   Future<void> _initializeRoom() async {
     final email = await _authService.getUserEmail();
+    if (!mounted) return;
     setState(() {
       _userName = email?.split('@').first ?? 'Unknown';
     });
@@ -47,28 +48,33 @@ class _RoomWaitingPageState extends State<RoomWaitingPage> {
 
   void _setupSocketListeners() {
     _socketService.onRoomCreated((data) {
+      if (!mounted) return;
       print('Room created: $data');
       _updateParticipants(data['room']['participants']);
     });
 
     _socketService.onRoomJoined((data) {
+      if (!mounted) return;
       print('Room joined: $data');
       _updateParticipants(data['room']['participants']);
     });
 
     _socketService.onUserJoined((data) {
+      if (!mounted) return;
       print('User joined: $data');
       _updateParticipants(data['room']['participants']);
       _showSnackBar('${data['userName']} joined the room');
     });
 
     _socketService.onUserLeft((data) {
+      if (!mounted) return;
       print('User left: $data');
       _updateParticipants(data['room']['participants']);
       _showSnackBar('A user left the room');
     });
 
     _socketService.onRoomError((data) {
+      if (!mounted) return;
       print('Room error: $data');
       _showSnackBar(data['message'], isError: true);
       if (data['message'] == 'Room not found') {
@@ -77,6 +83,7 @@ class _RoomWaitingPageState extends State<RoomWaitingPage> {
     });
 
     _socketService.onGameStarted((data) {
+      if (!mounted) return;
       print('Game started: $data');
       setState(() {
         _gameStarted = true;
@@ -94,6 +101,7 @@ class _RoomWaitingPageState extends State<RoomWaitingPage> {
   }
 
   void _updateParticipants(List<dynamic> participants) {
+    if (!mounted) return;
     setState(() {
       _participants = participants.cast<Map<String, dynamic>>();
     });
@@ -135,8 +143,8 @@ class _RoomWaitingPageState extends State<RoomWaitingPage> {
 
   @override
   void dispose() {
-    // Don't remove listeners when navigating to quiz page
-    // _socketService.removeAllListeners();
+    // Remove only room-related socket listeners to prevent setState calls on disposed widget
+    _socketService.removeRoomListeners();
     super.dispose();
   }
 
