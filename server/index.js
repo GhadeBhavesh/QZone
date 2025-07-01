@@ -82,7 +82,7 @@ app.use(express.json());
 
 // PostgreSQL connection using Supabase
 // Using environment variable with fallback
-const connectionString = process.env.DATABASE_URL || 'postgresql://postgres.wiblsiguzfdbayuydudr:bhavesh%404321@aws-0-ap-south-1.pooler.supabase.com:6543/postgres';
+const connectionString = process.env.DATABASE_URL || '';
 
 const pool = new Pool({
   connectionString: connectionString,

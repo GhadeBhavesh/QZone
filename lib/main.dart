@@ -4,6 +4,7 @@ import 'quiz_page.dart';
 import 'room_page.dart';
 import 'widgets/auth_wrapper.dart';
 import 'pages/login_page.dart';
+import 'pages/signup_page.dart';
 import 'pages/scores_page.dart';
 import 'pages/leaderboard_page.dart';
 import 'services/auth_service.dart';
@@ -26,6 +27,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/home': (context) => const MyHomePage(title: 'Game'),
         '/login': (context) => const LoginPage(),
+        '/signup': (context) => const SignupPage(),
       },
     );
   }

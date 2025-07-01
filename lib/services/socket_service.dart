@@ -8,8 +8,7 @@ class SocketService {
   IO.Socket? _socket;
 
   // Use your server URL
-  static const String serverUrl = 'https://qzone.onrender.com';
-  // For production: 'https://qzone.onrender.com'
+  static const String serverUrl = '';
 
   IO.Socket get socket {
     if (_socket == null) {

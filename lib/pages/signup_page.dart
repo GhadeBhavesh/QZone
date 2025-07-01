@@ -349,7 +349,7 @@ class _SignupPageState extends State<SignupPage> with TickerProviderStateMixin {
                               animation: _fadeAnimation,
                               builder: (context, child) {
                                 return Opacity(
-                                  opacity: _fadeAnimation.value,
+                                  opacity: _fadeAnimation.value.clamp(0.0, 1.0),
                                   child: TextButton(
                                     onPressed: () {
                                       Navigator.of(context).pop();
@@ -416,7 +416,7 @@ class _SignupPageState extends State<SignupPage> with TickerProviderStateMixin {
         return Transform.translate(
           offset: Offset(0, 50 * (1 - value)),
           child: Opacity(
-            opacity: value,
+            opacity: value.clamp(0.0, 1.0),
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.1),
