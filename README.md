@@ -31,7 +31,7 @@ Built a real-time multiplayer quiz game where users can join quiz rooms, compete
 
 
 ![Image](https://github.com/user-attachments/assets/9c64bb4b-f18c-41a7-98c1-7f4e6e68b1fd)
-![Image](https://github.com/user-attachments/assets/3d8ebf6c-b503-4225-ba58-234b62d39340)
+![image](https://github.com/user-attachments/assets/2ac6326e-fefc-4d65-9c93-c4d1b04c058e)
 ![Image](https://github.com/user-attachments/assets/03204d1b-0d49-40b9-ae67-234a85f87133)
 ![Image](https://github.com/user-attachments/assets/154c2e84-e00e-46b6-95cb-2f4d8dab8f20)
 ![Image](https://github.com/user-attachments/assets/3acf17ee-44a9-4322-9666-7575c23d8caf)
